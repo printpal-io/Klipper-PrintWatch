@@ -42,7 +42,7 @@ pip3 install -r requirements.txt
 ```
 sudo nano settings.json
 ```
-Then change the `api_key` and `camera_ip` fields to match your configuration.
+Then modify the `api_key` and `camera_ip` fields to match your configuration.
 
 You can obtain your API key from your account's [settings tab](https://app.printpal.io), or [upgrade](https://printpal.io/standard-checkout/) if you haven't upgraded your account yet. 
 
