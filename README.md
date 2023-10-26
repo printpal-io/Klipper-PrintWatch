@@ -1,8 +1,10 @@
-# PrintWatchAI_Backend
-Backend component for PrintWatchAI Plugin for Duet This backend monitors the webcam stream on any RepRapFirmware printer for spaghetti type defects. It can work with any camera that is accessible via an IP address/HTTP endpoint.
+# Klipper-PrintWatch
+PrintWatch Plugin that runs on any [Klipper](https://github.com/Klipper3d/klipper) based 3D Printer. This backend monitors the webcam stream on any Klipper printer for spaghetti type defects. It can work with any camera that is accessible via an IP address/HTTP endpoint. This Plugin requires [Moonraker](https://github.com/Arksine/moonraker) for making API requests to the Klipper firmware.
+
+If you are an OEM using Klipper for their printers, please [contact us](https://printpal.io/contact/) for a more custom integration, support, and licensing options.
 
 ## Installation
-This Backend component can be installed on any Linux device. Ensure that the latest version of pip is installed on your device with the following commands:
+This Backend component can be installed on any Linux device that is running Klipper. Ensure that the latest version of pip is installed on your device with the following commands:
 ```
 pip install --upgrade pip
 ```
@@ -26,27 +28,33 @@ cd /home/pi
 ```
 2. Download this repository's release for Raspberry Pi
 ```
-wget https://github.com/printpal-io/PrintWatchAI_Backend/archive/refs/tags/raspberrypi.zip
+git clone https://github.com/printpal-io/Klipper-PrintWatch
 ```
-3. Unzip the file
+3. Change directories
 ```
-unzip raspberrypi.zip && rm raspberrypi.zip
+cd Klipper-PrintWatch
 ```
-4. Change directories
-```
-cd PrintWatchAI_Backend-raspberrypi
-```
-5. Install libraries
+4. Install libraries
 ```
 pip3 install -r requirements.txt
 ```
+5. Modify the settings file
+```
+sudo nano settings.json
+```
+Then change the `api_key` and `camera_ip` fields to match your configuration.
+
+You can obtain your API key from your account's [settings tab](https://app.printpal.io), or [upgrade](https://printpal.io/standard-checkout/) if you haven't upgraded your account yet. 
+
+The `camera_ip` field should be the URL address for retrieveing the _static image_ of your webcam. If using crowsnest (built-in streamer for Klipper), this URL is configured in your `crowsnest.conf` file. The address is typically `http://127.0.0.1/webcam/?action=snapshot`. Verify this by entering the URL into your browser and ensuring the static image of the webcam is returned.
+
 6. Reload the systemctl daemo
 ```
 sudo systemctl daemon-reload
 ```
 7. Enable the systemctl process for PrintWatch
 ```
-sudo systemctl enable /home/pi/PrintWatchAI_Backend-raspberrypi/printwatch.service
+sudo systemctl enable /home/pi/Klipper-PrintWatch/printwatch.service
 ```
 8. Start the systemctl process for PrintWatch
 ```
@@ -65,153 +73,12 @@ Sep 08 23:35:28 pi python3[2237]: INFO:     Application startup complete.
 Sep 08 23:35:28 pi python3[2237]: INFO:     Uvicorn running on http://0.0.0.0:8989 (Press CTRL+C to quit)
 ```
 
-**Install the webcam streaming service:**
+## Usage
+In order to use the plugin, begin a print job and navigate to the [Web Application](https://app.printpal.io).
 
-1. SSH into the Raspberry Pi and navigate to the root directory of the user
-```
-cd /home/pi
-```
-2. Pull uStreamer
-```
-git clone --depth=1 https://github.com/pikvm/ustreamer
-```
-3. Change directories
-```
-cd ustreamer
-```
-4. Install dependencies
-```
-sudo apt install libevent-dev libjpeg9-dev libbsd-dev libasound2-dev libspeex-dev libspeexdsp-dev libopus-dev
-```
-5. Install
-```
-sudo make install
-```
-6. Make uStreamer user
-```
-sudo useradd -r ustreamer
-```
-```
-sudo usermod -a -G video ustreamer
-```
-7. Enable and start the systemctl process for uStreamer
-```
-sudo systemctl enable /home/pi/PrintWatchAI_Backend-raspberrypi/ustreamer.service
-```
-```
-sudo systemctl start ustreamer.service
-```
+A few seconds after starting the print, your printer should be displayed on the `Printers` page. From here, modify the settings for your printer and click 'save', this will propogate the changes back down to your printer.
 
-Once the uStreamer is installed and enabled, use the snapshot URL: `http://<raspberrypi-ip>:8080/snapshot` for the `Webcam URL` setting. Verify the URL by entering it into your browser and having a static image returned.
-### Orange Pi
-1. SSH into the Orange Pi and navigate to the root directory of the user
-```
-cd /home/orangepi
-```
-2. Download this repository's release for Orange Pi
-```
-wget https://github.com/printpal-io/PrintWatchAI_Backend/archive/refs/tags/orangepi.zip
-```
-3. Unzip the file
-```
-unzip orangepi.zip && rm orangepi.zip
-```
-4. Change directories
-```
-cd PrintWatchAI_Backend-orangepi
-```
-5. Install libraries
-```
-pip3 install -r requirements.txt
-```
-6. Reload the systemctl daemo
-```
-sudo systemctl daemon-reload
-```
-7. Enable the systemctl process for PrintWatch
-```
-sudo systemctl enable /home/orangepi/PrintWatchAI_Backend-orangepi/printwatch.service
-```
-8. Start the systemctl process for PrintWatch
-```
-sudo systemctl start printwatch.service
-```
-9. Validate the printwatch process is running
-```
-sudo journalctl -u printwatch
-```
-Outputs:
-```
-Sep 08 23:35:24 orangepi systemd[1]: Started PrintWatch AI.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Started server process [2237]
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Waiting for application startup.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Application startup complete.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Uvicorn running on http://0.0.0.0:8989 (Press CTRL+C to quit)
-```
-
-
-### Linux
-1. SSH into the Orange Pi and navigate to the root directory of the user
-```
-cd /home/{user}
-```
-2. Download this repository's release for Orange Pi
-```
-wget https://github.com/printpal-io/PrintWatchAI_Backend/archive/refs/tags/orangepi.zip
-```
-3. Unzip the file
-```
-unzip orangepi.zip && rm orangepi.zip
-```
-4. Change directories
-```
-cd PrintWatchAI_Backend-orangepi
-```
-5. Install libraries
-```
-pip3 install -r requirements.txt
-```
-6. Modify the `printwatch.service` file to match your configuration. Replace the `{user}` with your Linux devices corresponding name
-```
-[Unit]
-Description=PrintWatch AI
-After=multi-user.target
-
-[Service]
-WorkingDirectory=/home/{user}/PrintWatchAI_Backend-orangepi/
-User={user}
-Type=simple
-Restart=always
-ExecStart=/usr/bin/python3 /home/{user}/PrintWatchAI_Backend-orangepi/main.py
-
-[Install]
-WantedBy=multi-user.target
-```
-7. Reload the systemctl daemo
-```
-sudo systemctl daemon-reload
-```
-8. Enable the systemctl process for PrintWatch
-```
-sudo systemctl enable /home/{user}/PrintWatchAI_Backend-orangepi/printwatch.service
-```
-9. Start the systemctl process for PrintWatch
-```
-sudo systemctl start printwatch.service
-```
-10. Validate the printwatch process is running
-```
-sudo journalctl -u printwatch
-```
-Outputs:
-```
-Sep 08 23:35:24 orangepi systemd[1]: Started PrintWatch AI.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Started server process [2237]
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Waiting for application startup.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Application startup complete.
-Sep 08 23:35:28 orangepi python3[2237]: INFO:     Uvicorn running on http://0.0.0.0:8989 (Press CTRL+C to quit)
-```
-
+If this is your first time using the plugin, follow our [setup guide](https://printpal.io/documentation/tuning-your-setup/) for configuring your camera's settings, location, and the lighting.
 
 ## Development
-Develop a custom integration with the AI backend by using the [REST API documentation](https://github.com/printpal-io/PrintWatchAI_Backend/wiki/REST-API) found on this repository.
+Develop a custom integration with the AI backend by using the [REST API documentation](https://github.com/printpal-io/Klipper-PrintWatch/wiki/REST-API) found on this repository.
