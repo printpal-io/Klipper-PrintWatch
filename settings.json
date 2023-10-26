@@ -1,7 +1,7 @@
 {
     "api_key": "",
     "printer_id": "",
-    "camera_ip": "",
+    "camera_ip": "http://127.0.0.1/webcam/?action=snapshot",
     "email_addr": "",
     "test_mode": false,
     "monitoring_on": true,
