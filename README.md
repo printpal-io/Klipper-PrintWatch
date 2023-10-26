@@ -81,4 +81,4 @@ A few seconds after starting the print, your printer should be displayed on the 
 If this is your first time using the plugin, follow our [setup guide](https://printpal.io/documentation/tuning-your-setup/) for configuring your camera's settings, location, and the lighting.
 
 ## Development
-Develop a custom integration with the AI backend by using the [REST API documentation](https://github.com/printpal-io/Klipper-PrintWatch/wiki/REST-API) found on this repository.
+Develop a custom integration with the AI backend by using the [REST API documentation](https://github.com/printpal-io/PrintWatchAI_Backend/wiki/REST-API) found on this repository.
