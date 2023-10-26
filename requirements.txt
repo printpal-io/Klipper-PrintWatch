@@ -1,0 +1,9 @@
+setuptools
+wheel
+aiohttp
+ujson
+typing
+uvicorn
+Pillow
+requests
+fastapi

@@ -1,0 +1,13 @@
+[Unit]
+Description=PrintWatch AI
+After=multi-user.target
+
+[Service]
+WorkingDirectory=/home/pi/Klipper-PrintWatch/
+User=pi
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /home/pi/Klipper-PrintWatch/main.py
+
+[Install]
+WantedBy=multi-user.target

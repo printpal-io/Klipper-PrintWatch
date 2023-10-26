@@ -1,0 +1,23 @@
+{
+    "api_key": "",
+    "printer_id": "",
+    "camera_ip": "",
+    "email_addr": "",
+    "test_mode": false,
+    "monitoring_on": true,
+    "thresholds": {
+        "notification": 0.3,
+        "action": 0.6,
+        "display": 0.6
+    },
+    "buffer_length": 16,
+    "buffer_percent": 60,
+    "actions": {
+        "pause": false,
+        "cancel": false,
+        "notify": false,
+        "extruder_off": false
+    },
+    "enable_feedback_images": true,
+    "sma": 0.0
+}
