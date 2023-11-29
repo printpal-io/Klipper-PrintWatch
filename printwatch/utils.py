@@ -394,8 +394,8 @@ class LoopHandler:
         - Boolean - Whether retrigger has latched
         '''
         if not self.retrigger_valid:
-            num_below_threshold = [True if ele[1] < self.settings.get("thresholds", {}).get("notification", 0.3) else False for ele in self._buffer].count(True)
-            if num_below_threshold >= int(self.settings.get("buffer_length") * self.settings.get("buffer_percent")):
+            num_below_threshold = [ele[1] < self.settings.get("thresholds", {}).get("notification", 0.3) for ele in self._buffer].count(True)
+            if num_below_threshold >= int(self.settings.get("buffer_length") * self.settings.get("buffer_percent") / 100):
                 self.retrigger_valid = True
                 return True
             return self.retrigger_valid
