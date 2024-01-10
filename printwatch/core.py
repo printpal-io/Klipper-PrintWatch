@@ -82,7 +82,6 @@ class Core:
         self.router.add_api_route('/machine/printwatch/set_settings', self._change_settings, methods=["POST"])
         self.router.add_api_route('/machine/printwatch/get_settings', self._get_settings, methods=["GET"])
         self.router.add_api_route('/machine/printwatch/monitor', self._get_monitor, methods=["GET"])
-        self.router.add_api_route('/machine/printwatch/preview', self._get_preview, methods=["GET"])
         self.router.add_api_route('/machine/printwatch/monitor_init', self._add_monitor, methods=["GET"])
         self.router.add_api_route('/machine/printwatch/monitor_off', self._kill_monitor, methods=["GET"])
         self.router.add_api_route('/machine/printwatch/heartbeat', self._heartbeat, methods=["GET"])
@@ -198,24 +197,6 @@ class Core:
                         'active' : self.runner._loop_handler.active,
                         'message' : self.runner._loop_handler.errorMsg,
                         'settings' : self.settings
-                        }
-                    }
-                }
-
-    async def _get_preview(self) -> dict:
-        if self.runner is None:
-            return {'status' : 8001, 'response' : 'No monitor active'}
-        if self.runner._loop_handler.settingsIssue:
-            preview_ = 'settingsIssue'
-        else:
-            preview_ = 'loading' if self.runner._loop_handler.currentPreview is None else self.runner._loop_handler.currentPreview
-
-        return {'status' : 8000,
-                'items' :
-                    {'status' :
-                        {
-                        'preview' : preview_,
-                        'message' : self.runner._loop_handler.errorMsg
                         }
                     }
                 }

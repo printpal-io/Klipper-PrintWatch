@@ -7,7 +7,6 @@ from uuid import uuid4
 import asyncio
 import aiohttp
 import requests
-from PIL import ImageDraw
 import PIL.Image as Image
 from io import BytesIO
 
@@ -314,25 +313,6 @@ class LoopHandler:
             self._buffer.extend([[0, 0, 0]] * (self.settings.get("buffer_length") - len(self._buffer)))
             self._scores.extend([0] * (int(self.settings.get("buffer_length") * self.MULTIPLIER) - len(self._scores)))
 
-    def _draw_boxes(self, image, boxes : list) -> str:
-        pil_img = Image.open(BytesIO(image))
-        pil_image = pil_img.resize((640, 480))
-        process_image = ImageDraw.Draw(pil_img)
-        width, height = pil_img.size
-
-        for i, det in enumerate(boxes):
-            det = [j / 640 for j in det]
-            x1 = det[0] * width
-            y1 = det[1] * height
-            x2 = det[2] * width
-            y2 = det[3] * height
-            process_image.rectangle([(x1, y1), (x2, y2)], fill=None, outline="red", width=4)
-
-        out_img = BytesIO()
-        pil_img.save(out_img, format='PNG', quality=80)
-        contents = b64encode(out_img.getvalue()).decode('utf8')
-        self.currentPreview = 'data:image/png;charset=utf-8;base64,' + contents.split('\n')[0]
-
     def _handle_buffer(
                 self,
                 score : float,
@@ -507,7 +487,6 @@ class LoopHandler:
                                         api_client=self._api_client
                                     )
                     if response.get('statusCode') == 200:
-                        self._draw_boxes(frame, response.get('boxes'))
                         self._handle_buffer(
                                     score=response.get("score"),
                                     smas=response.get("smas")[0],
