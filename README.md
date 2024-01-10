@@ -48,6 +48,8 @@ You can obtain your API key from your account's [settings tab](https://app.print
 
 The `camera_ip` field should be the URL address for retrieveing the _static image_ of your webcam. If using crowsnest (built-in streamer for Klipper), this URL is configured in your `crowsnest.conf` file. The address is typically `http://127.0.0.1/webcam/?action=snapshot`. Verify this by entering the URL into your browser and ensuring the static image of the webcam is returned.
 
+If you want to edit the `api_key` or `camera_ip` after having started the `printwatch.service`, you must run the command `systemctl restart printwatch` for the changes to take effect.
+
 6. Reload the systemctl daemo
 ```
 sudo systemctl daemon-reload
@@ -72,6 +74,24 @@ Sep 08 23:35:28 pi python3[2237]: INFO:     Waiting for application startup.
 Sep 08 23:35:28 pi python3[2237]: INFO:     Application startup complete.
 Sep 08 23:35:28 pi python3[2237]: INFO:     Uvicorn running on http://0.0.0.0:8989 (Press CTRL+C to quit)
 ```
+
+## Enabling the AI component on Mainsail UI
+
+You must overwrite the Mainsail directory with the folder in this repository in order to enable the AI panel (this will change in the future).
+
+1. Change directories to root:
+```
+$ cd ~
+```
+2. Overwrite the current mainsail folder:
+```
+$ cp -r /Klipper-PrintWatch/mainsail mainsail/
+```
+3. Verify that the AI component is on the WebUI by visiting `http://<DEVICE IP>` and navigating to the Dashboard:
+
+![image](https://github.com/printpal-io/Klipper-PrintWatch/assets/95444610/7a273fce-f842-464c-8a20-ace9150d5c11)
+
+
 
 ## Usage
 In order to use the plugin, begin a print job and navigate to the [Web Application](https://app.printpal.io).
