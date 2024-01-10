@@ -85,7 +85,7 @@ $ cd ~
 ```
 2. Overwrite the current mainsail folder:
 ```
-$ cp -r /Klipper-PrintWatch/mainsail mainsail/
+$ cp -rf Klipper-PrintWatch/mainsail .
 ```
 3. Verify that the AI component is on the WebUI by visiting `http://<DEVICE IP>` and navigating to the Dashboard:
 
