@@ -93,12 +93,49 @@ $ cp -r /Klipper-PrintWatch/mainsail mainsail/
 
 
 
-## Usage
-In order to use the plugin, begin a print job and navigate to the [Web Application](https://app.printpal.io).
+# How to use the PrintWatch AI plugin on Mainsail UI
 
-A few seconds after starting the print, your printer should be displayed on the `Printers` page. From here, modify the settings for your printer and click 'save', this will propogate the changes back down to your printer.
+## Navigate to the dashboard
 
-If this is your first time using the plugin, follow our [setup guide](https://printpal.io/documentation/tuning-your-setup/) for configuring your camera's settings, location, and the lighting.
+Visit the Mainsail UI page at `http://<RPi IP address>`
+Navigate to the dashboard and observe the `AI` component added to the dashbaord items:
+
+![image](https://github.com/printpal-io/MATTERSHAPER_BUILD/assets/95444610/bd2251f2-5283-4cee-990a-be9e22b4f27d)
+
+**What each item means:**
+
+`Status` : this is the status of the AI monitor, it can be: `Monitoring`, `Idle`, or `Disabled`.
+  - `Monitoring` : this means that the AI is actively running and analyzing the webcam images
+  - `Idle` : this means the AI is turned on but not actively observing anything.
+  - `Disabled` : this means the AI is turned off
+
+`Sensitivity` : this is the current sensitivity of the AI set by the user.  It can be three values:
+  - `Fast (3 minutes)` : it takes ~3 minutes of consistent positive detections for an action to occur
+  - `Medium (6 minutes)` : it takes ~6 minutes of consistent positive detections for an action to occur
+  - `Long (12 minutes)` : it takes ~12 minutes of consistent positive detections for an action to occur
+
+`Notification` : if notifications are enabled by the user
+
+`Pausing` : if pausing the print is enabled by the user
+
+`Defect Level` : the current moving average of the defect level detected by the AI
+  - this value is `0-100`
+  - it is a moving average value of the last `16/32/64` detections
+    - if `Sensitivity` = `Fast (3 minutes` the last 16 detections are used for the average
+    - if `Sensitivity` = `Medium (6 minutes` the last 32 detections are used for the average
+    - if `Sensitivity` = `Fast (12 minutes` the last 64 detections are used for the average
+  - Equation for the moving average is:
+    
+![image](https://github.com/printpal-io/MATTERSHAPER_BUILD/assets/95444610/71c81249-24a7-4a2a-9ce8-55b52d0b47e7)
+
+## Navigate to the settings
+Visit the settings page from the top navigation bar of the Mainsail UI and navigate to the `AI` sidebar option:
+
+![image](https://github.com/printpal-io/MATTERSHAPER_BUILD/assets/95444610/7900e481-477e-48a9-a4a9-d232eb88548e)
+
+The user can change the settings on this page and then must click `SAVE`.
+
+If this is your first time using the plugin, follow our [configuration guide](https://docs.printpal.io/hardware-configuration/HARDWARE_CONFIGURATION_GUIDE/) for configuring your camera's settings, location, and the lighting.
 
 ## Development
 Develop a custom integration with the AI backend by using the [REST API documentation](https://github.com/printpal-io/PrintWatchAI_Backend/wiki/REST-API) found on this repository.
