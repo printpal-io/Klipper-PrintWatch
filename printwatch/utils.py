@@ -152,7 +152,6 @@ class MoonrakeComm:
                                     timeout=aiohttp.ClientTimeout(total=2.0)
                                 ) as response:
                                 r = await response.json()
-                print(f'First resp: {r}')
                 stats_ = r.get('result', {}).get('status', {}).get('print_stats', {})
 
                 async with aiohttp.ClientSession() as session:
@@ -161,7 +160,6 @@ class MoonrakeComm:
                                     timeout=aiohttp.ClientTimeout(total=2.0)
                                 ) as response:
                                 r1 = await response.json()
-                print(f'2nd resp: {r1}')
                 stats_["progress"] = r1.get("result", {}).get("status", {}).get("display_status", {}).get("progress", 0.5)
                 return stats_
             except Exception as e:
@@ -491,15 +489,14 @@ class LoopHandler:
                 frame = self.camera.snap_sync()
                 if len(frame) > 0:
                     stats_ = await self.moonraker_comm._get_print_stats()
-                    print(f'stats: {stats_}')
 
                     duration_ = stats_.get("print_duration", 550) if printing_ else 550
                     total_ = stats_.get("total_duration", 551) if printing_ else 551
                     print_stats = {
                         "state" : 0,
                         "printTime" : duration_,
-                        "printTimeLeft" : duration_*((1/stats_.get("progress")) - 1),
-                        "progress" : stats_.get("progress"),
+                        "printTimeLeft" : duration_*((1/stats_.get("progress", 0.01)) - 1) if stats_.get("progress", 0.0) != 0.0 else 100,
+                        "progress" : stats_.get("progress", 0.0),
                         "job_name" : stats_.get("filename", "temp-job-name.stl")
                     }
 
