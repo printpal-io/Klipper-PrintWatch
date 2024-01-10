@@ -29,13 +29,16 @@ class MJPEG:
                         if response.status == 200:
                             self.byte_frame = await response.read()
                             return self.byte_frame
-
-        self.pil_image = Image.open(BytesIO(self.byte_frame))
         return False
 
 
     def snap_sync(self) -> bytes:
-        r = requests.get(self.ip)
-        if r.status_code == 200:
-            self.byte_frame = r.content
-            return r.content
+        try:
+            r = requests.get(self.ip)
+            if r.status_code == 200:
+                self.byte_frame = r.content
+                return r.content
+            return b''
+        except Exception as e:
+            print(f'Exception with snap: {str(e)}')
+            return b''

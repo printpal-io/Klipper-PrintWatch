@@ -152,9 +152,20 @@ class MoonrakeComm:
                                     timeout=aiohttp.ClientTimeout(total=2.0)
                                 ) as response:
                                 r = await response.json()
+                print(f'First resp: {r}')
                 stats_ = r.get('result', {}).get('status', {}).get('print_stats', {})
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                                    '{}/printer/objects/query?display_status'.format(self.url),
+                                    timeout=aiohttp.ClientTimeout(total=2.0)
+                                ) as response:
+                                r1 = await response.json()
+                print(f'2nd resp: {r1}')
+                stats_["progress"] = r1.get("result", {}).get("status", {}).get("display_status", {}).get("progress", 0.5)
                 return stats_
-            except:
+            except Exception as e:
+                print(f'Except: {str(e)}')
                 return {}
 
     async def _control_print(self, cmd : str = 'pause'):
@@ -206,7 +217,8 @@ async def _async_infer(
 
 async def _async_notify(
         api_client : PrintWatchClient,
-        notification_level : str = 'warning'
+        notification_level : str = 'warning',
+        print_stats : dict = {}
     ) -> dict:
     '''
     Returns the notification endpoint response in an asynchrnous function call
@@ -222,7 +234,8 @@ async def _async_notify(
     payload = api_client._create_payload(
                             None,
                             notify=True,
-                            notification_level=notification_level
+                            notification_level=notification_level,
+                            print_stats=print_stats
                         )
 
     response = await api_client._send_async('api/v2/notify', payload)
@@ -230,7 +243,9 @@ async def _async_notify(
 
 async def _async_heartbeat(
         api_client : PrintWatchClient,
-        include_settings : bool
+        settings : dict = {},
+        state : int = 0,
+        force : bool = True
     ) -> dict:
     '''
     Returns the notification endpoint response in an asynchrnous function call
@@ -244,9 +259,11 @@ async def _async_heartbeat(
     - response : Flask.Response - inference response
     '''
     payload = api_client._create_payload(
-                            None,
-                            include_settings=include_settings
-                        )
+                                heartbeat=True,
+                                settings=settings,
+                                state=state,
+                                force=force
+                            )
 
     response = await api_client._send_async('api/v2/heartbeat', payload)
     return response
@@ -285,6 +302,9 @@ class LoopHandler:
         self.moonraker_comm = moonraker_comm
         self.currentPreview = None
         self.settings_funcs = settings_funcs
+        self.active = False
+        self.errorMsg = ''
+        self.settingsIssue = False
 
     def resize_buffers(self):
         if len(self._buffer) > self.settings.get("buffer_length"):
@@ -298,6 +318,7 @@ class LoopHandler:
 
     def _draw_boxes(self, image, boxes : list) -> str:
         pil_img = Image.open(BytesIO(image))
+        pil_image = pil_img.resize((640, 480))
         process_image = ImageDraw.Draw(pil_img)
         width, height = pil_img.size
 
@@ -310,7 +331,7 @@ class LoopHandler:
             process_image.rectangle([(x1, y1), (x2, y2)], fill=None, outline="red", width=4)
 
         out_img = BytesIO()
-        pil_img.save(out_img, format='PNG')
+        pil_img.save(out_img, format='PNG', quality=80)
         contents = b64encode(out_img.getvalue()).decode('utf8')
         self.currentPreview = 'data:image/png;charset=utf-8;base64,' + contents.split('\n')[0]
 
@@ -342,7 +363,7 @@ class LoopHandler:
             type : str = 'notify'
         ) -> bool:
         '''
-        CHecks if a trigger action should be permitted
+        Checks if a trigger action should be permitted
 
         Inputs:
         - type : str - the type of trigger to check for
@@ -352,10 +373,10 @@ class LoopHandler:
         '''
         if type == 'notify':
             if self.last_n_notifications_interval() < 10 and self.retrigger_check():
-                return True if len(self._notificationsSent) < 10 and time() - self._lastNotification > self.notifyTimer else False
+                return time() - self._lastNotification > self.notifyTimer
             return False
         elif type == 'action':
-            return True if self._actionsSent < 10 and time() - self._lastAction > self.notifyTimer else False
+            return  time() - self._lastAction > self.notifyTimer
 
     def last_n_notifications_interval(self, interval : int = 4 * 60 * 60) -> int:
         '''
@@ -378,7 +399,7 @@ class LoopHandler:
             running_total += 1
         return running_total
 
-    def retrigger_check(self) -> bool:
+    def retrigger_check(self, percent_below : float = 0.30) -> bool:
         '''
         Checks whether a previous detection has reset. The criteria for resetting
         are as follow:
@@ -386,7 +407,6 @@ class LoopHandler:
             notification has been sent
             - The AI Level has decreased below the notification threshold and
             remained there for N = bufer_length * buffer_percent cycles
-
 
         Inputs:
 
@@ -397,8 +417,6 @@ class LoopHandler:
             num_below_threshold = [ele[1] < self.settings.get("thresholds", {}).get("notification", 0.3) for ele in self._buffer].count(True)
             if num_below_threshold >= int(self.settings.get("buffer_length") * self.settings.get("buffer_percent") / 100):
                 self.retrigger_valid = True
-                return True
-            return self.retrigger_valid
         return self.retrigger_valid
 
     async def _check_action(self, response : dict) -> None:
@@ -435,32 +453,25 @@ class LoopHandler:
         Checks if any actions should be taken.
         Notifications and Pauses will be triggered from inside this method.
         '''
-        if self._levels[1] and self._allow_trigger('action') and self.settings.get("actions", {}).get("pause", False):
+        if self._allow_trigger('action') and self._levels[1] and self.settings.get("actions", {}).get("pause", False):
             notification_level = 'action'
-            if self.settings.get("actions", {}).get("pause", False) or self.settings.get("actions", {}).get("cancel", False):
-                r = await self.moonraker_comm._control_print("pause")
-
-                response = await _async_notify(
-                                        api_client=self._api_client,
-                                        notification_level=notification_level
-                                    )
-
-                if response.get('statusCode') == 200:
-                    self._buffer = [0] * self.settings.get("buffer_length")
-                    self._scores = [0] * int(self.settings.get("buffer_length") * self.MULTIPLIER)
-                    self._levels = [False, False]
-                    self._actionsSent += 1
-                    self._lastAction = time()
-                else:
-                    # Retry logic
-                    pass
-        elif self._levels[0] and self._allow_trigger('notify') and self.settings.get("actions", {}).get("notify", False):
-            print("Sending Warning via Email")
-            notification_level = 'warning'
-
+            r = await self.moonraker_comm._control_print("pause")
+            print_stats  = await self.moonraker_comm._get_print_stats()
             response = await _async_notify(
                                     api_client=self._api_client,
-                                    notification_level=notification_level
+                                    notification_level=notification_level,
+                                    print_stats=print_stats
+                                )
+            self._lastAction = time()
+
+        elif self._allow_trigger('notify') and self._levels[0] and self.settings.get("actions", {}).get("notify", False):
+            print("Sending Warning via Email")
+            notification_level = 'warning'
+            print_stats  = await self.moonraker_comm._get_print_stats()
+            response = await _async_notify(
+                                    api_client=self._api_client,
+                                    notification_level=notification_level,
+                                    print_stats=print_stats
                                 )
             self._lastNotification = time()
             self.retrigger_valid = False
@@ -476,17 +487,19 @@ class LoopHandler:
             printer_state_ = await self.moonraker_comm._get_state()
             printing_ = printer_state_ == 'printing'
             if printing_ or self.settings.get("test_mode"):
+                self.active = True
                 frame = self.camera.snap_sync()
-                if not isinstance(frame, bool):
+                if len(frame) > 0:
                     stats_ = await self.moonraker_comm._get_print_stats()
+                    print(f'stats: {stats_}')
 
                     duration_ = stats_.get("print_duration", 550) if printing_ else 550
                     total_ = stats_.get("total_duration", 551) if printing_ else 551
                     print_stats = {
                         "state" : 0,
                         "printTime" : duration_,
-                        "printTimeLeft" : total_ - duration_,
-                        "progress" : 100. * (total_ - duration_) / total_,
+                        "printTimeLeft" : duration_*((1/stats_.get("progress")) - 1),
+                        "progress" : stats_.get("progress"),
                         "job_name" : stats_.get("filename", "temp-job-name.stl")
                     }
 
@@ -512,21 +525,28 @@ class LoopHandler:
                     else:
                         print('Response code not 200: {}'.format(response))
                 else:
-                    print("Issue with camera")
+                    self.settingsIssue = True
+                    print("Issue with camera: {}".format(frame))
+                    self.errorMsg = "Issue with camera: {}".format(frame)
             else:
-                # run heartbeat
-                pass
-                '''
-                try:
-                    result_ = await _async_heartbeat(self._api_client)
-                    if isinstance(result_, dict):
-                        await self._check_action(result_)
-                except Exception as e:
-                    print("Exception with heartbeat: {}".format(str(e)))
-                '''
+                self.active = False
+                self.errorMsg = ''
+                self._buffer = [[0, 0, 0]] * self.settings.get("buffer_length")
+                self._scores = [0] * int(self.settings.get("buffer_length") * self.MULTIPLIER)
+                self._levels = [False, False]
+                self.retrigger_valid = True
+                state_ = 1 if printer_state_ == 'paused' else 2
+                r_ = await _async_heartbeat(
+                            api_client=self._api_client,
+                            settings= {},
+                            state = state_,
+                            force=False
+                        )
+                if isinstance(r_, dict):
+                    await self._check_action(r_)
         except Exception as e:
-            print("Exception as e: {}".format(str(e)))
-        except Exception as e:
+            self.settingsIssue = True
+            self.errorMsg = str(e)
             print("Error running once: {}".format(str(e)))
 
 

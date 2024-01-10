@@ -9,9 +9,7 @@ import ujson
 import uvicorn
 import os
 from pydantic import BaseModel
-from typing import Optional, Union
-from threading import Thread
-from contextlib import asynccontextmanager
+from typing import Optional
 from uuid import uuid4
 
 origins = [
@@ -65,7 +63,19 @@ class Core:
         self._load_settings()
         self.printwatch = PrintWatchClient(settings=self.settings)
         self.aio = get_or_create_eventloop()
-        asyncio.ensure_future(_async_heartbeat(self.printwatch, True))
+        settings_ = {
+                    'detection_threshold' : int(self.settings.get("thresholds", {}).get("display", 0.6) * 100),
+                    'buffer_length' : int(self.settings.get("buffer_length")),
+                    'notification_threshold' : int(self.settings.get("thresholds", {}).get("notification", .30) * 100),
+                    'action_threshold' : int(self.settings.get("thresholds", {}).get("action", .60) * 100),
+                    'enable_notification' : self.settings.get("actions", {}).get("notify", False),
+                    'email_address' : self.settings.get("email_addr"),
+                    'pause_print' : self.settings.get("actions", {}).get("pause", False),
+                    'cancel_print' : self.settings.get("actions", {}).get("cancel", False),
+                    'extruder_heat_off' : self.settings.get("actions", {}).get("extruder_off", False),
+                    'enable_feedback_images' : True
+                }
+        asyncio.ensure_future(_async_heartbeat(api_client=self.printwatch, settings=settings_))
         self._init_monitor()
 
         self.router = APIRouter()
@@ -101,7 +111,19 @@ class Core:
             self.runner._loop_handler.camera.ip = self.settings.get("camera_ip")
 
         if hasattr(self, 'printwatch'):
-            asyncio.ensure_future(_async_heartbeat(self.printwatch, True))
+            settings_ = {
+                        'detection_threshold' : int(self.settings.get("thresholds", {}).get("display", 0.6) * 100),
+                        'buffer_length' : int(self.settings.get("buffer_length")),
+                        'notification_threshold' : int(self.settings.get("thresholds", {}).get("notification", .30) * 100),
+                        'action_threshold' : int(self.settings.get("thresholds", {}).get("action", .60) * 100),
+                        'enable_notification' : self.settings.get("actions", {}).get("notify", False),
+                        'email_address' : self.settings.get("email_addr"),
+                        'pause_print' : self.settings.get("actions", {}).get("pause", False),
+                        'cancel_print' : self.settings.get("actions", {}).get("cancel", False),
+                        'extruder_heat_off' : self.settings.get("actions", {}).get("extruder_off", False),
+                        'enable_feedback_images' : True
+                    }
+            asyncio.ensure_future(_async_heartbeat(api_client=self.printwatch, settings=settings_))
 
     def _save_settings(self):
         with open("settings.json", "w") as f:
@@ -171,9 +193,11 @@ class Core:
         return {'status' : 8000,
                 'items' :
                     {'status' :
-                        {'scores' : self.runner._loop_handler._scores,
-                        'levels' : self.runner._loop_handler._levels,
-                        'buffer' : self.runner._loop_handler._buffer
+                        {
+                        'ema' : self.runner._loop_handler._buffer[-1][0],
+                        'active' : self.runner._loop_handler.active,
+                        'message' : self.runner._loop_handler.errorMsg,
+                        'settings' : self.settings
                         }
                     }
                 }
@@ -181,10 +205,17 @@ class Core:
     async def _get_preview(self) -> dict:
         if self.runner is None:
             return {'status' : 8001, 'response' : 'No monitor active'}
+        if self.runner._loop_handler.settingsIssue:
+            preview_ = 'settingsIssue'
+        else:
+            preview_ = 'loading' if self.runner._loop_handler.currentPreview is None else self.runner._loop_handler.currentPreview
+
         return {'status' : 8000,
                 'items' :
                     {'status' :
-                        {'preview' : self.runner._loop_handler.currentPreview
+                        {
+                        'preview' : preview_,
+                        'message' : self.runner._loop_handler.errorMsg
                         }
                     }
                 }

@@ -22,12 +22,15 @@ class PrintWatchClient():
 
     def _create_payload(
             self,
-            encoded_image : str,
+            encoded_image : str = None,
             scores : list = [],
             print_stats : dict = {},
             notify : bool = False,
+            heartbeat : bool = False,
             notification_level : str = 'warning',
-            include_settings : bool = False
+            settings : dict = {},
+            state : int = 0,
+            force : bool = True
         ) -> dict:
         '''
         Creates the JSON payload for requests
@@ -38,36 +41,26 @@ class PrintWatchClient():
                 "api_key" : self.settings.get("api_key"),
                 "printer_id" : self.settings.get("printer_id"),
                 "email_addr" : self.settings.get("email_addr"),
-                "printTime" : print_stats.get("printTime", 550),
-                "printTimeLeft" : print_stats.get("printTimeLeft", 1),
-                "progress" : print_stats.get("progress", 0),
-                "job_name" : print_stats.get("job_name", "none"),
+                "printTime" : print_stats.get("print_duration", 550),
+                "printTimeLeft" : print_stats.get("print_duration", 550) * ((1/print_stats.get("progress", 1.0)) - 1),
+                "progress" : print_stats.get("progress", 0.0),
+                "job_name" : print_stats.get("filename", "none"),
                 "notification" : notification_level,
                 "time" : datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S")
             }
-        elif encoded_image is None:
+        elif heartbeat:
             payload = {
                 'api_key': self.settings.get("api_key"),
                 'printer_id' : self.settings.get("printer_id"),
-                'state' : 0,
+                'state' : state,
                 'version' : "1.3.01",
                 'ticket_id' : self.ticket_id,
-                'force' : True,
+                'force' : force,
             }
-            if include_settings:
-                payload['settings'] = {
-                    'detection_threshold' : int(100*self.settings.get("thresholds", {}).get("display", 0.60)),
-                    'buffer_length' : int(self.settings.get("buffer_length", 16)),
-                    'notification_threshold' : int(100*self.settings.get("thresholds", {}).get("notification", 0.3)),
-                    'action_threshold' : int(100*self.settings.get("thresholds", {}).get("action", 0.6)),
-                    'enable_notification' : self.settings.get("actions", {}).get("notify", False),
-                    'email_address' : self.settings.get("email_addr"),
-                    'pause_print' : self.settings.get("actions", {}).get("pause", False),
-                    'cancel_print' : self.settings.get("actions", {}).get("cancel", False),
-                    'extruder_heat_off' : self.settings.get("actions", {}).get("extruder_off", False),
-                    'enable_feedback_images' : self.settings.get('enable_feedback_images', True)
-                }
-
+            if len(settings) > 0:
+                payload["settings"] = {}
+                for key, ele in settings.items():
+                    payload["settings"][key] = ele
         else:
             if self.ticket_id == '':
                 self.create_ticket()
